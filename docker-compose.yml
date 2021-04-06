@@ -1,0 +1,23 @@
+version: '2'
+services:
+  builder:
+    build: builder
+    links:
+      - deployer
+    volumes:
+      - ./artifacts:/usr/local/builddir
+    networks:
+      - task7
+
+  deployer:
+    image: tomcat:latest
+    links:
+      - builder
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./artifacts:/$CATALINA_HOME/webapps/
+    networks:
+      - task7
+    depends_on:
+      - builder
