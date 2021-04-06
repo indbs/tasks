@@ -2,8 +2,6 @@ version: '2'
 services:
   builder:
     build: builder
-    links:
-      - deployer
     volumes:
       - ./artifacts:/usr/local/builddir
     networks:
@@ -11,8 +9,6 @@ services:
 
   deployer:
     image: tomcat:latest
-    links:
-      - builder
     ports:
       - "8080:8080"
     volumes:
