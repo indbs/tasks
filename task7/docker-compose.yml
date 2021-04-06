@@ -3,7 +3,7 @@ services:
   builder:
     build: builder
     volumes:
-      - ./artifacts:/usr/local/builddir
+      - ./artifacts:/usr/local/buildout
     networks:
       - task7
 
