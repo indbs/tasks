@@ -17,3 +17,7 @@ services:
       - task7
     depends_on:
       - builder
+
+networks:
+  task7:
+    driver: bridge
