@@ -1,9 +1,14 @@
 version: '2'
 services:
   builder:
-    build: builder
+    build:
+      context: builder/
+      args:
+        - BUILD_PATH
+        - BUILD_OUT
+        - DEST_PATH
     volumes:
-      - ./artifacts:/usr/local/buildout
+      - ./artifacts:${DEST_PATH}/${BUILD_OUT}
     networks:
       - task7
 
