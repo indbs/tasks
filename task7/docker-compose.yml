@@ -9,20 +9,23 @@ services:
         - DEST_PATH
     volumes:
       - ./artifacts:${DEST_PATH}/${BUILD_OUT}
-    networks:
-      - task7
+#    networks:
+#      - task7
 
   deployer:
-    image: tomcat:latest
+    build:
+      context: deployer/
+      args:
+        - DEST_PATH
     ports:
       - "8080:8080"
     volumes:
-      - ./artifacts:/usr/local/tomcat/webapps/
-    networks:
-      - task7
+      - ./artifacts:${DEST_PATH}/tomcat/webapps/
+#    networks:
+#      - task7
     depends_on:
       - builder
 
-networks:
-  task7:
-    driver: bridge
+#networks:
+#  task7:
+#    driver: bridge
