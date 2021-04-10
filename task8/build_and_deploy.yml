@@ -1,6 +1,9 @@
 ---
 - name: build
   hosts: localhost
+  vars:
+    art_path: /home/user/artifacts
+    loc_path: /usr/local
 
   tasks:
   - name: Ensure git is present on build node
@@ -18,26 +21,28 @@
   - name: Cloning sources to build node over https
     git:
      repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
-     dest: /usr/local/boxfuse-sample-java-war-hello
+     dest: "{{ loc_path }}/boxfuse-sample-java-war-hello"
      clone: yes
      update: no
   - name: Building war file
-    shell: cd /usr/local/boxfuse-sample-java-war-hello && mvn package
+    shell: cd "{{ loc_path }}/boxfuse-sample-java-war-hello" && mvn package
   - name: Cloning artifacts repo over ssh
     git:
      repo: git@github.com:indbs/artifacts.git
-     dest: /home/user/artifacts
+     dest: "{{ art_path }}"
      clone: yes
      update: yes
   - name: Copying builded artifacts
     copy:
-     src: /usr/local/boxfuse-sample-java-war-hello/target/hello-1.0.war
-     dest: /home/user/artifacts
+     src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
+     dest: "{{ art_path }}"
   - name: Pushing to remote repo over ssh
-    shell: cd /home/user/artifacts && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push gi$
+    shell: cd "{{ art_path }}"  && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push git@g$
 
 - name: deploy
   hosts: deploy
+  vars:
+    art_path: /user/local/artifacts
 
   tasks:
   - name: Ensure git is present on deploy node
@@ -51,10 +56,11 @@
   - name: Cloning artifacts to deploy node over https
     git:
      repo: https://github.com/indbs/artifacts.git
-     dest: /usr/local/artifacts
+     dest: "{{ art_path }}"
      clone: yes
      update: yes
   - file:
-     src: /usr/local/artifacts/hello-1.0.war
+     src: "{{ art_path }}/hello-1.0.war"
      dest: /var/lib/tomcat9/webapps/hello-1.0.war
      state: link
+
