@@ -9,8 +9,6 @@ services:
         - DEST_PATH
     volumes:
       - ./artifacts:${DEST_PATH}/${BUILD_OUT}
-#    networks:
-#      - task7
 
   deployer:
     build:
@@ -21,11 +19,6 @@ services:
       - "8080:8080"
     volumes:
       - ./artifacts:${DEST_PATH}/tomcat/webapps/
-#    networks:
-#      - task7
     depends_on:
       - builder
 
-#networks:
-#  task7:
-#    driver: bridge

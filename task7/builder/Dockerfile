@@ -15,7 +15,6 @@ RUN apt-get install -y \
         maven \
         mc
 RUN mkdir -p "${DEST_PATH}/${BUILD_PATH}"
-#       && mkdir -p "${DEST_PATH}/${BUILD_OUT}" created by volume definition
 
 CMD cd "${DP}/${BP}" \
         && rm -rf \
