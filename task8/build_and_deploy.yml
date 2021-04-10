@@ -1,24 +1,60 @@
 ---
-- name: install build environment
-  hosts: local
+- name: build
+  hosts: localhost
 
   tasks:
-  - name: Ensure git is present
+  - name: Ensure git is present on build node
     apt:
      name: git
      state: present
-  - name: Ensure default-jdk is present
+  - name: Ensure default-jdk is present on build node
     apt:
      name: default-jdk
      state: present
-  - name: Ensure maven is present
+  - name: Ensure maven is present on build node
     apt:
      name: maven
      state: present
-
-  - name: Cloning sources to master node
+  - name: Cloning sources to build node over https
     git:
      repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
-     dest: /usr/local
+     dest: /usr/local/boxfuse-sample-java-war-hello
+     clone: yes
+     update: no
+  - name: Building war file
+    shell: cd /usr/local/boxfuse-sample-java-war-hello && mvn package
+  - name: Cloning artifacts repo over ssh
+    git:
+     repo: git@github.com:indbs/artifacts.git
+     dest: /home/user/artifacts
      clone: yes
      update: yes
+  - name: Copying builded artifacts
+    copy:
+     src: /usr/local/boxfuse-sample-java-war-hello/target/hello-1.0.war
+     dest: /home/user/artifacts
+  - name: Pushing to remote repo over ssh
+    shell: cd /home/user/artifacts && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push gi$
+
+- name: deploy
+  hosts: deploy
+
+  tasks:
+  - name: Ensure git is present on deploy node
+    apt:
+     name: git
+     state: present
+  - name: Ensure tomcat9 is present on deploy node
+    apt:
+     name: tomcat9
+     state: present
+  - name: Cloning artifacts to deploy node over https
+    git:
+     repo: https://github.com/indbs/artifacts.git
+     dest: /usr/local/artifacts
+     clone: yes
+     update: yes
+  - file:
+     src: /usr/local/artifacts/hello-1.0.war
+     dest: /var/lib/tomcat9/webapps/hello-1.0.war
+     state: link
