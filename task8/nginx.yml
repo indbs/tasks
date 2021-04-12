@@ -1,0 +1,12 @@
+---
+- name: build
+  hosts: localhost
+  vars:
+    loc_path: /usr/local
+
+  tasks:
+  - name: Ensure nginx is present on build node
+    apt:
+     name: nginx
+     state: present
+     
