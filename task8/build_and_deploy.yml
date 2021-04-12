@@ -2,7 +2,7 @@
 - name: build
   hosts: localhost
   vars:
-    art_path: /home/user/artifacts
+#    art_path: /home/user/artifacts
     loc_path: /usr/local
 
   tasks:
@@ -26,23 +26,27 @@
      update: no
   - name: Building war file
     shell: cd "{{ loc_path }}/boxfuse-sample-java-war-hello" && mvn package
-  - name: Cloning artifacts repo over ssh
-    git:
-     repo: git@github.com:indbs/artifacts.git
-     dest: "{{ art_path }}"
-     clone: yes
-     update: yes
-  - name: Copying builded artifacts
-    copy:
+  - name: Transfer artifact to deploy nodes
+    fetch:
      src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
-     dest: "{{ art_path }}"
-  - name: Pushing to remote repo over ssh
-    shell: cd "{{ art_path }}"  && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push git@github.com:indbs/artifacts.git
+     dest: /var/lib/tomcat9/webapps/hello-1.0.war
+#  - name: Cloning artifacts repo over ssh
+#    git:
+#     repo: git@github.com:indbs/artifacts.git
+#     dest: "{{ art_path }}"
+#     clone: yes
+#     update: yes
+#  - name: Copying builded artifacts
+#    copy:
+#     src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
+#     dest: "{{ art_path }}"
+#  - name: Pushing to remote repo over ssh
+#    shell: cd "{{ art_path }}"  && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push git@github.com:indbs/artifacts.git
 
 - name: deploy
   hosts: deploy
-  vars:
-    art_path: /user/local/artifacts
+#  vars:
+#    art_path: /user/local/artifacts
 
   tasks:
   - name: Ensure git is present on deploy node
@@ -53,14 +57,13 @@
     apt:
      name: tomcat9
      state: present
-  - name: Cloning artifacts to deploy node over https
-    git:
-     repo: https://github.com/indbs/artifacts.git
-     dest: "{{ art_path }}"
-     clone: yes
-     update: yes
-  - file:
-     src: "{{ art_path }}/hello-1.0.war"
-     dest: /var/lib/tomcat9/webapps/hello-1.0.war
-     state: link
-
+#  - name: Cloning artifacts to deploy node over https
+#    git:
+#     repo: https://github.com/indbs/artifacts.git
+#     dest: "{{ art_path }}"
+#     clone: yes
+#     update: yes
+#  - file:
+#     src: "{{ art_path }}/hello-1.0.war"
+#     dest: /var/lib/tomcat9/webapps/hello-1.0.war
+#     state: link
