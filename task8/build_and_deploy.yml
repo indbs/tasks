@@ -26,10 +26,6 @@
      update: no
   - name: Building war file
     shell: cd "{{ loc_path }}/boxfuse-sample-java-war-hello" && mvn package
-  - name: Transfer artifact to deploy nodes
-    fetch:
-     src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
-     dest: /var/lib/tomcat9/webapps/hello-1.0.war
 #  - name: Cloning artifacts repo over ssh
 #    git:
 #     repo: git@github.com:indbs/artifacts.git
@@ -45,9 +41,9 @@
 
 - name: deploy
   hosts: deploy
-#  vars:
+  vars:
 #    art_path: /user/local/artifacts
-
+    loc_path: /usr/local
   tasks:
   - name: Ensure git is present on deploy node
     apt:
@@ -57,6 +53,10 @@
     apt:
      name: tomcat9
      state: present
+  - name: Transfer artifact to deploy nodes
+    copy:
+     src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
+     dest: /var/lib/tomcat9/webapps/hello-1.0.war-deploy
 #  - name: Cloning artifacts to deploy node over https
 #    git:
 #     repo: https://github.com/indbs/artifacts.git
