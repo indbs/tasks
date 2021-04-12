@@ -37,7 +37,7 @@
      src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
      dest: "{{ art_path }}"
   - name: Pushing to remote repo over ssh
-    shell: cd "{{ art_path }}"  && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push git@g$
+    shell: cd "{{ art_path }}"  && git stage hello-1.0.war && git commit -m "builded at {{ ansible_date_time.iso8601 }}" && git push git@github.com:indbs/artifacts.git
 
 - name: deploy
   hosts: deploy
