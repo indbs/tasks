@@ -56,7 +56,7 @@
   - name: Transfer artifact to deploy nodes
     copy:
      src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
-     dest: /var/lib/tomcat9/webapps/hello-1.0.war-deploy
+     dest: /var/lib/tomcat9/webapps/hello-1.0.war
 #  - name: Cloning artifacts to deploy node over https
 #    git:
 #     repo: https://github.com/indbs/artifacts.git
