@@ -1,0 +1,46 @@
+---
+- name: build
+  hosts: localhost
+  vars:
+    loc_path: /usr/local
+
+  tasks:
+  - name: Ensure git is present on build node
+    apt:
+     name: git
+     state: present
+  - name: Ensure default-jdk is present on build node
+    apt:
+     name: default-jdk
+     state: present
+  - name: Ensure maven is present on build node
+    apt:
+     name: maven
+     state: present
+  - name: Cloning sources to build node over https
+    git:
+     repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
+     dest: "{{ loc_path }}/boxfuse-sample-java-war-hello"
+     clone: yes
+     update: no
+  - name: Building war file
+    shell: cd "{{ loc_path }}/boxfuse-sample-java-war-hello" && mvn package
+
+- name: deploy
+  hosts: deploy
+  vars:
+    loc_path: /usr/local
+  tasks:
+  - name: Ensure git is present on deploy node
+    apt:
+     name: git
+     state: present
+  - name: Ensure tomcat9 is present on deploy node
+    apt:
+     name: tomcat9
+     state: present
+  - name: Transfer artifact to deploy nodes
+    synchronize:
+     src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
+     dest: /var/lib/tomcat9/webapps/hello-1.0.war
+     mode: push
