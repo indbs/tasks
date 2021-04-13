@@ -1,2 +1,21 @@
 ---
 # tasks file for build
+- name: Install build packages
+  apt: name={{item}} state=present
+  with_items:
+       - git
+       - default-jdk
+       - maven
+- name: Cloning sources to build node over https
+  git:
+    repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
+    dest: "{{ loc_path }}/boxfuse-sample-java-war-hello"
+    clone: yes
+    update: no
+- name: Building war file
+  shell: cd "{{ loc_path }}/boxfuse-sample-java-war-hello" && mvn package
+- name: Transfer artifact to deploy nodes
+  synchronize:
+    src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
+    dest: /var/lib/tomcat9/webapps/hello-1.0.war
+    mode: push
