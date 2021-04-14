@@ -18,4 +18,6 @@
   synchronize:
     src: "{{ loc_path }}/boxfuse-sample-java-war-hello/target/hello-1.0.war"
     dest: /var/lib/tomcat9/webapps/hello-1.0.war
-    mode: push
+    mode: pull
+  delegate_to: "{{ item }}"
+  loop: "{{ groups['deploy'] }}"
