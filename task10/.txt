@@ -34,4 +34,4 @@ apt update && apt install git default-jdk maven docker.io -y
 
 #second job
     #pulling
-    (docker pull 178.154.198.249:8123/webapp:$TAG; docker run -d -ti 178.154.198.249:8123/webapp:$TAG)
+    (docker pull 178.154.198.249:8123/webapp:$TAG; docker run -p 8080:8080 -d -ti 178.154.198.249:8123/webapp:$TAG)
