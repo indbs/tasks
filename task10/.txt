@@ -1,32 +1,37 @@
-#build machine needs to be logged in nexus, docker on build machine have setting in etc/docker/daemon.js { "insecure-registries":["178.154.198.249:8123"] }
+#build to be logged in nexus, docker on prod and build machine have setting in etc/docker/daemon.json { "insecure-registries":["178.154.198.249:8123"] } and restart docker
 #first script prepares machine
 apt update && apt install git default-jdk maven docker.io -y
 
-#second script build artifact
-rm -rf /usr/local/build
-mkdir -p /usr/local/build
-(cd /usr/local/build; git clone https://github.com/boxfuse/boxfuse-sample-java-war-hello.git; echo $PWD)
-(cd /usr/local/build/boxfuse-sample-java-war-hello; mvn package)
+#first job
+    #second script build artifact
+    rm -rf /usr/local/build
+    mkdir -p /usr/local/build
+    (cd /usr/local/build; git clone https://github.com/boxfuse/boxfuse-sample-java-war-hello.git; echo $PWD)
+    (cd /usr/local/build/boxfuse-sample-java-war-hello; mvn package)
 
-#build machine logged to nexus
-#third script pushes to docker repo builded image
-(cd /usr/local/build; printf "FROM alpine:3.7
-RUN apk add openjdk8
-RUN apk add --no-cache --virtual .service-package wget
-RUN wget https://apache-mirror.rbc.ru/pub/apache/tomcat/tomcat-9/v9.0.45/bin/apache-tomcat-9.0.45.tar.gz -O /tmp/tomcat9.0.45.tar.gz \
-        && tar xvfz /tmp/tomcat9.0.45.tar.gz -C /tmp \
-        && mkdir -p /usr/local/tomcat \
-        && cp -Rv /tmp/apache-tomcat-9.0.45/* usr/local/tomcat/ \
-        && rm -rf /tmp \
-RUN apk del .service-package
-COPY boxfuse-sample-java-war-hello/target/hello-1.0.war usr/local/tomcat/webapps/
-EXPOSE 8080
-CMD usr/local/tomcat/bin/catalina.sh run"> Dockerfile; docker build -t webapp .; docker tag webapp 178.154.198.249:8123/webapp; docker push 178.154.198.249:8123/webapp)
+    #build machine logged to nexus
+    #third script pushes to docker repo builded image
+    (cd /usr/local/build; printf "FROM alpine:3.7
+    RUN apk add openjdk8
+    RUN apk add --no-cache --virtual .service-package wget
+    RUN wget https://apache-mirror.rbc.ru/pub/apache/tomcat/tomcat-9/v9.0.45/bin/apache-tomcat-9.0.45.tar.gz -O /tmp/tomcat9.0.45.tar.gz \
+            && tar xvfz /tmp/tomcat9.0.45.tar.gz -C /tmp \
+            && mkdir -p /usr/local/tomcat \
+            && cp -Rv /tmp/apache-tomcat-9.0.45/* usr/local/tomcat/ \
+            && rm -rf /tmp \
+    RUN apk del .service-package
+    COPY boxfuse-sample-java-war-hello/target/hello-1.0.war usr/local/tomcat/webapps/
+    EXPOSE 8080
+    CMD usr/local/tomcat/bin/catalina.sh run"> Dockerfile; docker build -t webapp .; docker tag webapp 178.154.198.249:8123/webapp; docker push 178.154.198.249:8123/webapp)
 
-#shorthand docker coommands
-#build image with specified tag from Dockerfile
-docker build -t webapp:1.0.0 .
-#Tagging image for proper registry
-docker tag webapp:1.0.0 178.154.198.249:8123/webapp:1.0.0
-#Pushing image with proper tag in registry
-docker push 178.154.198.249:8123/webapp:1.0.0
+    #shorthand docker coommands
+    #build image with specified tag from Dockerfile
+    docker build -t webapp:1.0.0 .
+    #Tagging image for proper registry
+    docker tag webapp:1.0.0 178.154.198.249:8123/webapp:1.0.0
+    #Pushing image with proper tag in registry
+    docker push 178.154.198.249:8123/webapp:1.0.0
+
+#second job
+    #pulling
+    (docker pull 178.154.198.249:8123/webapp:$TAG; docker run -d -ti 178.154.198.249:8123/webapp:$TAG)
