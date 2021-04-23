@@ -1,0 +1,42 @@
+pipeline {
+    agent {
+        docker {
+            image '178.154.193.215:8123/webappbuilder'
+            args '-v $(which docker):/usr/bin/docker'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+    stages {
+        stage('Clone') {
+            steps {
+                git 'https://github.com/indbs/boxfuse_cloned'
+            }
+        }
+        stage ('Build') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+        stage('Push') {
+            steps {
+                sh 'cp -R /var/lib/jenkins/workspace/docker\\ pipe/target/hello-1.0.war /var/lib/jenkins/workspace/docker\\ pipe \
+                    && cd /var/lib/jenkins/workspace/docker\\ pipe \
+                    && docker build . -t deployed_boxfuse \
+                    && docker tag deployed_boxfuse 178.154.193.215:8123/deployed_boxfuse'
+                withDockerRegistry([ credentialsId: "3ff26ad8-9b9c-41bf-bbae-4f5c8d47cd9e", url: "http://178.154.193.215:8123" ]) {
+                    sh 'docker push 178.154.193.215:8123/deployed_boxfuse'
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'sudo ssh-keyscan -t rsa 84.201.153.42 >> /root/.ssh/known_hosts'
+                sh '''ssh root@84.201.153.42 << EOF
+        	        sudo docker pull 178.154.193.215:8123/deployed_boxfuse
+        	        cd /etc/shop/docker
+        	        sudo docker run -ti -d -p 8080:8080 178.154.193.215:8123/deployed_boxfuse
+                EOF'''
+            }
+        }
+    }
+}
