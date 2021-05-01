@@ -1,0 +1,203 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: true
+  tasks:
+
+  - name: Set AWS KEY ID
+    set_fact: AWS_ACCESS_KEY_ID="{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+  - name: Set AWS SECRET
+    set_fact: AWS_SECRET_ACCESS_KEY="{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+
+  - name: create key pair and store key
+    amazon.aws.ec2_key:
+      name: keypairAnsible11
+    register: result
+  - debug:
+      msg: "{{ result.key }}"
+  - set_fact:
+      kpa11_meta: "{{ result.key }}"
+  - local_action:
+      module: copy
+      content: "{{ kpa11_meta.private_key }}"
+      dest: ~/.ssh/kpa11.pem
+    when: kpa11_meta.private_key is defined
+
+  - name: chmod key
+    file:
+     path: ~/.ssh/kpa11.pem
+     mode: '400'
+
+  - name: create build security group
+    amazon.aws.ec2_group:
+      name: buildGroup
+      description: buildGroup
+      rules:
+      - proto: tcp
+        ports:
+        - 22
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow 22
+  
+  - name: create prod security group
+    amazon.aws.ec2_group:
+      name: prodGroup
+      description: prodGroup
+      rules:
+      - proto: tcp
+        ports:
+        - 22
+        - 80
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow 22 and 80
+
+  - name: provision build instance
+    amazon.aws.ec2:
+      key_name: keypairAnsible11
+      group: buildGroup
+      region: us-east-2
+      instance_type: t2.micro
+      image: ami-08962a4068733a2b6
+      wait: true
+      instance_tags:
+        Name: buildMachine
+      count: 1
+    register: result
+  - debug:
+      msg: "{{ result }}"
+  - set_fact:
+      buildInstanceId: "{{ result.instances[0].id }}"
+      buildInstanceIp: "{{ result.instances[0].public_ip }}"
+
+  - name: provision prod instance
+    amazon.aws.ec2:
+      key_name: keypairAnsible11
+      group: prodGroup
+      region: us-east-2
+      instance_type: t2.micro
+      image: ami-08962a4068733a2b6
+      wait: true
+      instance_tags:
+        Name: prodMachine
+      count: 1
+    register: result
+  - debug:
+      msg: "{{ result }}"
+  - set_fact:
+      prodInstanceId: "{{ result.instances[0].id }}"
+      prodInstanceIp: "{{ result.instances[0].public_ip }}"
+
+  - local_action:
+      module: copy
+      content: "build instance ip: {{ buildInstanceIp }}
+        build instance id: {{ buildInstanceId }}
+        prod instance ip: {{ prodInstanceIp }}
+        prod instance id: {{ prodInstanceId }}"
+      dest: /tmp/aws_instances.info
+
+  - name: Add host to group 'build'
+    add_host:
+      name: "{{ buildInstanceIp }}"
+      groups: build
+      ansible_ssh_private_key_file: ~/.ssh/kpa11.pem
+
+  - name: Add host to group 'prod'
+    add_host:
+      name: "{{ prodInstanceIp }}"
+      groups: prod
+      ansible_ssh_private_key_file: ~/.ssh/kpa11.pem
+
+- name: build
+  hosts: build
+  remote_user: ubuntu
+  become: true
+  gather_facts: False
+  tasks:
+
+  - name: Get AWS KEY ID
+    set_fact: aws_key_id={{hostvars['localhost']['AWS_ACCESS_KEY_ID']}}
+  - name: Get AWS SECRET KEY
+    set_fact: aws_secret_key={{hostvars['localhost']['AWS_SECRET_ACCESS_KEY']}}
+
+  - name: Ensure maven is present on build node
+    apt:
+     name: maven
+     state: present
+     update_cache: yes
+  - name: Ensure default-jdk is present on deploy node
+    apt:
+     name: default-jdk
+     state: present
+  - name: Ensure git is present on build node
+    apt:
+     name: git
+     state: present
+  - name: Ensure python3-pip is present on build node
+    apt:
+     name: python3-pip
+     state: present
+  - name: Install boto3 and botocore with pip3 module
+    pip:
+      name: 
+      - boto3
+      - botocore
+      executable: pip3
+  - name: Cloning sources to build node over https
+    git:
+     repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
+     dest: "tmp/boxfuse-sample-java-war-hello"
+     clone: yes
+     update: no
+
+  - name: Building war file
+    shell: cd "tmp/boxfuse-sample-java-war-hello" && mvn package
+
+  - name: Store artifact
+    aws_s3:
+      bucket: artifact.bucket.unique.name.special
+      object: /hello-1.0.war
+      src: tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      mode: put
+      aws_access_key: '{{aws_key_id}}'
+      aws_secret_key: '{{aws_secret_key}}'
+
+- name: deploy
+  hosts: prod
+  remote_user: ubuntu
+  gather_facts: False
+  become: true
+  tasks:
+
+  - name: Get AWS KEY ID
+    set_fact: aws_key_id={{hostvars['localhost']['AWS_ACCESS_KEY_ID']}}
+  - name: Get AWS SECRET KEY
+    set_fact: aws_secret_key={{hostvars['localhost']['AWS_SECRET_ACCESS_KEY']}}
+
+  - name: Ensure git is present on deploy node
+    apt:
+     name: git
+     state: present
+     update_cache: yes
+  - name: Ensure tomcat9 is present on deploy node
+    apt:
+     name: tomcat9
+     state: present
+  - name: Ensure python3-pip is present on build node
+    apt:
+     name: python3-pip3
+     state: present
+  - name: Install boto3 and botocore with pip3 module
+    pip:
+      name: 
+      - boto3
+      - botocore
+      executable: pip3
+
+  - name: Get artifact
+    aws_s3:
+      bucket: artifact.bucket.unique.name.special
+      object: /hello-1.0.war
+      dest: /var/lib/tomcat9/webapps/hello-1.0.war
+      mode: get
+      aws_access_key: '{{aws_key_id}}'
+      aws_secret_key: '{{aws_secret_key}}'

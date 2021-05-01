@@ -1,0 +1,47 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+
+  - name: create key pair
+    amazon.aws.ec2_key:
+      name: keypairAnsible5
+    register: result
+  - debug:
+      msg: result
+
+  - name: create security group
+    amazon.aws.ec2_group:
+      name: groupAnsible
+      description: groupAnsible
+
+  - name: provision instance
+    amazon.aws.ec2:
+      key_name: keypairAnsible5
+      group: groupAnsible
+      region: us-east-2
+      instance_type: t2.micro
+      image: ami-08962a4068733a2b6
+      wait: true
+      instance_tags:
+        Name: buildNode
+      state: stopped
+    register: result
+  - debug:
+      msg: result
+
+  - name: Provision prod instance
+    amazon.aws.ec2:
+      key_name: keypairAnsible
+      group: groupAnsible
+      region: us-east-2
+      instance_type: t2.micro
+      image: ami-08962a4068733a2b6
+      wait: true
+      instance_tags:
+        Name: prodNode
+      state: stopped
+    register: result
+  - debug:
+      msg: result
