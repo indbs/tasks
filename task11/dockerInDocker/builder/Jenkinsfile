@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Pull build image') {
+          steps {
+            sh 'docker pull 178.154.199.172:8123/webappbuilder'
+            sh 'docker run --name builder -ti -d 178.154.199.172:8123/webappbuilder'
+          }
+        }
+    
+        stage('Build artifact in build container') {
+          steps {
+            sh '''docker exec -u root --privileged -d builder bin/bash -c EOF sudo su && mkdir -p /tmp/src && rm -rf /tmp/src \
+                && cd /tmp/src \
+                && git clone https://github.com/indbs/boxfuse_cloned \
+                && cd /tmp/src/boxfuse_cloned \
+                && mvn package
+                EOF'''
+          }
+        }
+    
+        stage('Build deploy container in build container') {
+          steps {
+            sh '''docker exec -u root -d builder << EOF
+                FROM alpine:3.7
+                RUN apk add openjdk8
+                RUN apk add --no-cache --virtual .service-package wget
+
+                RUN wget https://apache-mirror.rbc.ru/pub/apache/tomcat/tomcat-9/v9.0.45/bin/apache-tomcat-9.0.45.tar.gz -O /tmp/tomcat9.0.45.tar.gz \
+                    && tar xvfz /tmp/tomcat9.0.45.tar.gz -C /tmp \
+                    && cp -Rv /tmp/apache-tomcat-9.0.45/* usr/local/tomcat/ \
+                    && rm -rf /tmp
+                RUN apk del .service-package
+                EXPOSE 8080
+                VOLUME /usr/local/build/boxfuse_cloned/target /usr/local/tomcat/webapps
+
+                CMD ${DP}/tomcat/bin/catalina.sh run > Dockerfile && docker build -t webapplication . EOF'''
+            sh '''docker tag webapplication 178.154.199.172:8123/webapplication && docker push 178.154.199.172:8123/webapplication'''
+          }
+        }
+    
+        /*stage('Run docker on devbe-srv01') {
+          steps {
+            sh 'ssh-keyscan -H devbe-srv01 >> ~/.ssh/known_hosts'
+            sh '''ssh jenkins@devbe-srv01 << EOF
+    	        sudo docker pull devcvs-srv01:5000/shop2-backend/gateway-api:2-staging
+    	        cd /etc/shop/docker
+    	        sudo docker-compose up -d
+            EOF'''
+          }
+        }*/
+    }
+}

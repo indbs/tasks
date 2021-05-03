@@ -1,0 +1,140 @@
+pipeline {
+
+	parameters { string(name: "Version", defaultValue: "", description: "Version of application to deploy. Format 'vX-XXX-Y'") }
+
+	options { 
+		timestamps()
+		ansiColor('xterm')
+		disableConcurrentBuilds()
+	}
+
+	agent any
+    
+	stages {
+		stage("Checkout playbooks from Git") {
+			steps {
+				script {
+					currentBuild.displayName = "web-release-${params.Version}"
+				}
+				step([$class: 'WsCleanup'])
+				dir ("ansible") {
+					git ([branch: "master",
+						  credentialsId: "jenkins_prod_ssh",
+						  url: "git@gitlab.flora.ltfs.tools:heathers-repo/ops/ansible-playbooks/infrastructure/deploy-broker-wl10.git"])
+				}
+			}
+		}
+		
+		stage("Node check-mode") {
+			environment {
+				SUDO_PASS = credentials('releases_web_htr_sudo_pass')
+			}
+			steps {
+				echo "Deploying first node" 
+				dir ("ansible") {
+					ansiblePlaybook(installation: "ansible2.8.6",
+									vaultCredentialsId: "releases_web_htr_ansible_v4_vault",
+									inventory: "inventories/prod/hosts",
+									limit: "*01*",
+									playbook: "deploy-broker-wl10.yml",
+									become: true,
+									becomeUser: "root",
+									tags: "broker",
+									extras: "--check -D",
+									extraVars: [
+									           ansible_become_pass: [value: "${SUDO_PASS}", hidden: false],
+											   broker_tag: [value: "${params.Version}".replaceAll("\\.", "-").trim(), hidden: false]
+									],
+									colorized: true)
+				}
+			}
+		}
+
+		stage("First node deploy") {
+			input {
+				message "Confirm first node deploy"
+				ok "Go!"
+			}
+			environment {
+				SUDO_PASS = credentials('releases_web_htr_sudo_pass')
+			}
+			steps {
+				echo "Deploying first node" 
+				dir ("ansible") {
+					ansiblePlaybook(installation: "ansible2.8.6",
+									vaultCredentialsId: "releases_web_htr_ansible_v4_vault",
+									inventory: "./inventories/prod/hosts",
+									limit: "*01*",
+									playbook: "deploy-broker-wl10.yml",
+									become: true,
+									becomeUser: "root",
+									tags: "broker",
+									extras: "-D",
+									extraVars: [
+									           ansible_become_pass: [value: "${SUDO_PASS}", hidden: false],
+											   broker_tag: [value: "${params.Version}".replaceAll("\\.", "-").trim(), hidden: false]
+									],
+									colorized: true)
+				}
+			}
+		}
+		
+		stage("Second node deploy") {
+			input {
+				message "Confirm second node deploy"
+				ok "Go!"
+			}
+			environment {
+				SUDO_PASS = credentials('releases_web_htr_sudo_pass')
+			}
+			steps {
+				echo "Deploying second node" 
+				dir ("ansible") {
+					ansiblePlaybook(installation: "ansible2.8.6",
+									vaultCredentialsId: "releases_web_htr_ansible_v4_vault",
+									inventory: "./inventories/prod/hosts",
+									limit: "*02*",
+									playbook: "deploy-broker-wl10.yml",
+									become: true,
+									becomeUser: "root",
+									tags: "broker",
+									extras: "",
+									extraVars: [
+									           ansible_become_pass: [value: "${SUDO_PASS}", hidden: false],
+											   broker_tag: [value: "${params.Version}".replaceAll("\\.", "-").trim(), hidden: false]
+									],
+									colorized: true)
+				}
+			}
+		}
+		
+		stage("All remaining nodes deploy") {
+			input {
+				message "Confirm all remaining nodes deploy"
+				ok "Go!"
+			}
+			environment {
+				SUDO_PASS = credentials('releases_web_htr_sudo_pass')
+			}
+			steps {
+				echo "Deploying all nodes" 
+				dir ("ansible") {
+					ansiblePlaybook(installation: "ansible2.8.6",
+									vaultCredentialsId: "releases_web_htr_ansible_v4_vault",
+									inventory: "./inventories/prod/hosts",
+									limit: "*03*",
+									playbook: "deploy-broker-wl10.yml",
+									become: true,
+									becomeUser: "root",
+									tags: "broker",
+									extras: "",
+									extraVars: [
+									           ansible_become_pass: [value: "${SUDO_PASS}", hidden: false],
+											   broker_tag: [value: "${params.Version}".replaceAll("\\.", "-").trim(), hidden: false]
+									],
+									colorized: true)
+				}
+			}
+		}
+	}
+}

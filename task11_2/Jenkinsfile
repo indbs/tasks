@@ -30,7 +30,7 @@ pipeline {
         }
         stage('Deploy') {
             steps {
-                sh 'sudo ssh-keyscan -H 84.201.153.42 >> /root/.ssh/known_hosts'
+                sh 'ssh-keyscan -H 84.201.153.42 >> /root/.ssh/known_hosts'
                 sh '''ssh root@84.201.153.42 << EOF
         	        sudo docker pull 178.154.193.215:8123/deployed_boxfuse
         	        sudo docker run -ti -d -p 8080:8080 178.154.193.215:8123/deployed_boxfuse
