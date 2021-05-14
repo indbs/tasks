@@ -21,23 +21,19 @@
 
   - name: Wait for system to become reachable
     wait_for_connection:
-
-  - name: Apt update
+     delay: 30
+     timeout: 30
+  - name: Ensure needed packages is presented on build node
     apt:
+     name: "{{ item }}"
+     state: present
      update_cache: yes
-     upgrade: yes
-  - name: Ensure maven is present on build node
-    apt:
-     name: maven
-     state: present
-  - name: Ensure default-jdk is present on deploy node
-    apt:
-     name: default-jdk
-     state: present
-  - name: Ensure git is present on build node
-    apt:
-     name: git
-     state: present
+    with_items:
+     - maven
+     - git
+     - default-jdk
+     - mc
+     - docker.io
 
   - name: Cloning sources to build node over https
     git:
@@ -48,3 +44,21 @@
 
   - name: Building war file
     shell: cd "tmp/boxfuse-sample-java-war-hello" && mvn package
+
+  - name: Copy artifact
+    copy:
+     src: "tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war"
+     dest: /tmp
+
+  - name: Copy Dockerfile
+    copy:
+     src: "/home/final_task/Dockerfile"
+     dest: /tmp
+
+  - name: Build container image
+    docker_image:
+      name: boxfuse:v1.0
+      build:
+        path: /tmp
+        source: build
+      state: present
