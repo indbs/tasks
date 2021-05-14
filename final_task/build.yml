@@ -19,23 +19,18 @@
   gather_facts: False
   tasks:
 
-  - name: Wait for system to become reachable
+  - name: Wait for node to become reachable
     wait_for_connection:
      delay: 30
      timeout: 30
-  - name: Ensure needed packages is presented on build node
+
+  - name: Install needed packages
     apt:
-     name: "{{ item }}"
+     name: ['maven', 'git', 'default-jdk', 'mc', 'docker.io', 'python3-docker', 'python3', 'python3-pip']
      state: present
      update_cache: yes
-    with_items:
-     - maven
-     - git
-     - default-jdk
-     - mc
-     - docker.io
 
-  - name: Cloning sources to build node over https
+  - name: Cloning sources
     git:
      repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
      dest: "tmp/boxfuse-sample-java-war-hello"
@@ -45,20 +40,21 @@
   - name: Building war file
     shell: cd "tmp/boxfuse-sample-java-war-hello" && mvn package
 
-  - name: Copy artifact
+  - name: Copy artifact on remote
     copy:
+     remote_src: yes
      src: "tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war"
-     dest: /tmp
+     dest: tmp
 
-  - name: Copy Dockerfile
+  - name: Copy Dockerfile to remote
     copy:
      src: "/home/final_task/Dockerfile"
-     dest: /tmp
+     dest: tmp
 
   - name: Build container image
     docker_image:
       name: boxfuse:v1.0
       build:
-        path: /tmp
-        source: build
+        path: tmp
+      source: build
       state: present
