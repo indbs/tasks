@@ -1,0 +1,21 @@
+pipeline {
+  agent any
+  environment {
+    base_path='/home/final_task/'
+    TF_IN_AUTOMATION = 'true'
+  }
+  stages {
+    stage('Provide remote machine in AWS by Terraform') {
+      steps {
+        sh "cd ${env.base_path} && terraform init -input=false"
+        sh "cd ${env.base_path} && terraform plan -var 'pvt_key=~/.ssh/aws3.pem' -out=tfplan -input=false -lock=false"
+        sh "cd ${env.base_path} && terraform apply -input=false tfplan"
+      }
+    }
+    stage('Build in Ansible') {
+      steps {
+        sh "cd ${env.base_path} && ansible-playbook build.yml"
+      }
+    }
+  }
+}

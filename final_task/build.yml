@@ -1,0 +1,50 @@
+---
+- name: manage hosts
+  hosts: localhost
+  connection: local
+  vars:
+    cloud_machine_ip: "{{ lookup('file', 'cloud_machine_ip.info') }}"
+  tasks:
+
+  - name: Add host to group 'build'
+    add_host:
+      name: "{{ cloud_machine_ip }}"
+      groups: build
+      ansible_ssh_private_key_file: ~/.ssh/aws3.pem
+
+- name: build
+  hosts: build
+  remote_user: ubuntu
+  become: true
+  gather_facts: False
+  tasks:
+
+  - name: Wait for system to become reachable
+    wait_for_connection:
+
+  - name: Apt update
+    apt:
+     update_cache: yes
+     upgrade: yes
+  - name: Ensure maven is present on build node
+    apt:
+     name: maven
+     state: present
+  - name: Ensure default-jdk is present on deploy node
+    apt:
+     name: default-jdk
+     state: present
+  - name: Ensure git is present on build node
+    apt:
+     name: git
+     state: present
+
+  - name: Cloning sources to build node over https
+    git:
+     repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
+     dest: "tmp/boxfuse-sample-java-war-hello"
+     clone: yes
+     update: no
+
+  - name: Building war file
+    shell: cd "tmp/boxfuse-sample-java-war-hello" && mvn package
