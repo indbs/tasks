@@ -46,15 +46,37 @@
      src: "tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war"
      dest: tmp
 
-  - name: Copy Dockerfile to remote
+  - name: Copy files for Docker
     copy:
-     src: "/home/final_task/Dockerfile"
+     src: "{{ item }}"
      dest: tmp
+    with_items:
+      - /home/final_task/Dockerfile
+      - /home/final_task/.env
+      - /home/final_task/config.json
+
+  - name: Creates directory for creds
+    file:
+      path: ~/.docker/
+      state: directory
+
+  - name: Copy creds
+    copy:
+     remote_src: yes
+     src: "tmp/config.json"
+     dest: ~/.docker/
 
   - name: Build container image
     docker_image:
-      name: boxfuse:v1.0
+      name: boxfuse:v1.1
       build:
         path: tmp
       source: build
       state: present
+
+  - name: Tag and push image to docker hub
+    docker_image:
+      name: boxfuse:v1.1
+      repository: devmanseneng/boxfuse:v1.1
+      push: yes
+      source: local
