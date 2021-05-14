@@ -30,13 +30,6 @@
      state: present
      update_cache: yes
 
-  - name: Copy files for Docker
-    copy:
-     src: "{{ item }}"
-     dest: tmp
-    with_items:
-      - /home/final_task/config.json
-
   - name: Creates directory for creds
     file:
       path: ~/.docker/
@@ -45,19 +38,21 @@
   - name: Copy creds
     copy:
      remote_src: yes
-     src: "tmp/config.json"
+     src: /home/final_task/config.json
      dest: ~/.docker/
 
   - name: Pull image from docker hub
     docker_image:
-      name: boxfuse:v1.1
+      name: devmanseneng/boxfuse:v1.1
       source: pull
 
   - name: Runs container
     docker_container:
       name: boxfuse
       state: started
-      image: boxfuse:v1.1
+      image: devmanseneng/boxfuse:v1.1
       interactive: yes
+      ports:
+        - "8080:8080"
       tty: yes
       detach: yes

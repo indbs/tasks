@@ -52,7 +52,6 @@
      dest: tmp
     with_items:
       - /home/final_task/Dockerfile
-      - /home/final_task/.env
       - /home/final_task/config.json
 
   - name: Creates directory for creds

@@ -1,6 +1,6 @@
 FROM alpine:3.7
 
-ARG DEST_PATH
+ARG DEST_PATH=/usr/local
 ENV DP=$DEST_PATH
 
 RUN apk add openjdk8
