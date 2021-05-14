@@ -1,0 +1,63 @@
+---
+- name: manage hosts
+  hosts: localhost
+  connection: local
+  vars:
+    stage_machine_ip: "{{ lookup('file', 'stage_machine_ip.info') }}"
+  tasks:
+
+  - name: Add host to group 'stage'
+    add_host:
+      name: "{{ stage_machine_ip }}"
+      groups: stage
+      ansible_ssh_private_key_file: ~/.ssh/aws3.pem
+
+- name: stage
+  hosts: stage
+  remote_user: ubuntu
+  become: true
+  gather_facts: False
+  tasks:
+
+  - name: Wait for node to become reachable
+    wait_for_connection:
+     delay: 30
+     timeout: 30
+
+  - name: Install needed packages
+    apt:
+     name: ['mc', 'docker.io', 'python3-docker', 'python3', 'python3-pip']
+     state: present
+     update_cache: yes
+
+  - name: Copy files for Docker
+    copy:
+     src: "{{ item }}"
+     dest: tmp
+    with_items:
+      - /home/final_task/config.json
+
+  - name: Creates directory for creds
+    file:
+      path: ~/.docker/
+      state: directory
+
+  - name: Copy creds
+    copy:
+     remote_src: yes
+     src: "tmp/config.json"
+     dest: ~/.docker/
+
+  - name: Pull image from docker hub
+    docker_image:
+      name: boxfuse:v1.1
+      source: pull
+
+  - name: Runs container
+    docker_container:
+      name: boxfuse
+      state: started
+      image: boxfuse:v1.1
+      interactive: yes
+      tty: yes
+      detach: yes

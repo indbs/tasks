@@ -5,7 +5,7 @@ pipeline {
     TF_IN_AUTOMATION = 'true'
   }
   stages {
-    stage('Provide remote machine in AWS by Terraform') {
+    stage('Provide build and stage machines in AWS by Terraform') {
       steps {
         sh "cd ${env.base_path} && terraform init -input=false"
         sh "cd ${env.base_path} && terraform plan -var 'pvt_key=~/.ssh/aws3.pem' -out=tfplan -input=false -lock=false"
@@ -15,6 +15,11 @@ pipeline {
     stage('Build in Ansible') {
       steps {
         sh "cd ${env.base_path} && ansible-playbook build.yml"
+      }
+    }
+    stage('Stage in Ansible') {
+      steps {
+        sh "cd ${env.base_path} && ansible-playbook stage.yml"
       }
     }
   }

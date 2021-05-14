@@ -3,12 +3,12 @@
   hosts: localhost
   connection: local
   vars:
-    cloud_machine_ip: "{{ lookup('file', 'cloud_machine_ip.info') }}"
+    build_machine_ip: "{{ lookup('file', 'build_machine_ip.info') }}"
   tasks:
 
   - name: Add host to group 'build'
     add_host:
-      name: "{{ cloud_machine_ip }}"
+      name: "{{ build_machine_ip }}"
       groups: build
       ansible_ssh_private_key_file: ~/.ssh/aws3.pem
 
